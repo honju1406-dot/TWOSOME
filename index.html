@@ -208,7 +208,7 @@ details.card .body{padding:0 16px 8px;display:flex;flex-direction:column;gap:0}
 .ro .n{font-weight:600;grid-column:1;grid-row:1}
 .ro .why{font-size:11.5px;color:var(--muted);grid-column:1;grid-row:2}
 .ro .q{grid-column:2;grid-row:1 / 3;text-align:right}
-.ro .q b{display:block;font-size:16px;font-weight:700;color:var(--accent)}
+.ro .q b{display:block;font-size:18px;font-weight:700;color:var(--ink);line-height:1.1}
 .ro .q span{font-size:11px;color:var(--muted)}
 .rk{display:flex;gap:10px;align-items:center;padding:7px 16px}
 .rk>div:nth-child(2){flex:1 1 auto;min-width:0}
@@ -602,16 +602,16 @@ function reorderPlan(){
 function renderReorder(){
   const host = $("#reorder"); if (!host) return; host.replaceChildren();
   const plan = reorderPlan(); if (!plan.rows.length) return;
-  const text = () => plan.rows.map(r => `${r.item.name} ${r.packs ? r.packs+"PAC("+r.qty+"조각)" : r.qty+r.unit}`).join("\n");
-  const copyBtn = el("button",{class:"btn sm",onclick:async()=>{ try { await navigator.clipboard.writeText("[발주 목록 "+fmtDate(todayStr())+"]\n"+text()); toast("발주 목록을 복사했습니다"); } catch { toast("복사할 수 없는 환경입니다"); } }},"목록 복사");
+  const text = () => plan.rows.map(r => `${r.item.name} — 하루 ${r.daily.toFixed(1)}개, 판매가능 ${r.avail}`).join("\n");
+  const copyBtn = el("button",{class:"btn sm",onclick:async()=>{ try { await navigator.clipboard.writeText("[발주 검토 "+fmtDate(todayStr())+"]\n"+text()); toast("목록을 복사했습니다"); } catch { toast("복사할 수 없는 환경입니다"); } }},"목록 복사");
   const d = el("details",{class:"card",open:true},
     el("summary",{style:"padding:12px 16px 10px;list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer"}, el("span",{class:"pill accent"},"발주 필요"), el("b",{}, `${plan.rows.length}개 품목`), el("span",{class:"grow"}), copyBtn),
     el("div",{class:"sub",style:"padding:0 16px 10px"}, `오늘 발주하면 ${fmtDate(plan.arrive)} (${dow(plan.arrive)}) 입고 · 최근 ${plan.days}일 판매 속도 기준`));
   const list = el("div",{});
   for (const r of plan.rows) {
-    const why = r.hot ? `하루 ${r.daily.toFixed(1)}개 판매 · 입고까지 ${plan.lead}일 + ${plan.cover}일분 = ${r.need}개 필요, 판매가능 ${r.avail}` : (r.avail <= 0 ? `품절 (판매가능 ${r.avail})` : `판매가능 ${r.avail} · 최소 재고 미만`);
+    const why = r.hot ? `판매가능 ${r.avail} · 입고까지 ${plan.lead}일 + ${plan.cover}일분이면 ${r.need}개 필요` : (r.avail <= 0 ? `품절 (판매가능 ${r.avail})` : `판매가능 ${r.avail} · 최소 재고 미만`);
     list.append(el("div",{class:"ro"}, el("div",{class:"n"}, r.item.name, r.hot ? el("span",{class:"pill warn",style:"margin-left:6px"},"잘 나감") : null), el("div",{class:"why"}, why),
-      el("div",{class:"q"}, el("b",{}, r.packs ? `${r.packs} PAC` : `${r.qty} ${r.unit}`), r.packs ? el("span",{}, `${r.qty}조각`) : null)));
+      el("div",{class:"q"}, el("b",{}, r.daily > 0 ? r.daily.toFixed(1) : "0"), el("span",{}, "개 / 일"))));
   }
   d.append(list); host.append(d);
 }
@@ -1185,7 +1185,7 @@ $("#btn-ignore-save").addEventListener("click", async () => {
 });
 
 // ---------- 데이터 계층 (Apps Script API) ----------
-const APP_VERSION = "1.8";
+const APP_VERSION = "1.9";
 const CFG = window.APP_CONFIG || {};
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
 let API_URL = CFG.GAS_WEB_APP_URL || store.get("cs.api") || "";
