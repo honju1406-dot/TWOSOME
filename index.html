@@ -13,7 +13,6 @@
 <link rel="icon" href="./icon-192.png">
 <script src="./config.js"></script>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap">
 <style>
 :root{
   --bg:#f4f3f1; --card:#ffffff; --ink:#111111; --muted:#7a7672; --line:#e3e0dc; --line-strong:#111111;
@@ -21,8 +20,8 @@
   --accent:#c8102e; --accent-ink:#ffffff; --accent-soft:#fbeaed; --accent-deep:#8f0b21;
   --warn:#9a6a12; --warn-soft:#f8efd9; --bad:#c8102e; --bad-soft:#fbeaed; --ok:#111111;
   --chip:#ebe8e4; --shadow:none; --r:8px;
-  --font:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
-  --latin:"Montserrat","Noto Sans KR",system-ui,sans-serif;
+  --font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --latin:var(--font);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -44,7 +43,7 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%;overflow-x:hidden;max-width:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;font-weight:400}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;font-weight:400;letter-spacing:-.01em}
 button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3{margin:0;text-wrap:balance;line-height:1.25}
 .num{font-variant-numeric:tabular-nums;font-family:var(--latin)}
@@ -110,21 +109,21 @@ input[type=number].qty,.qty{width:76px;flex:0 0 76px;min-width:0}
 
 /* stock table */
 .stock{display:flex;flex-direction:column}
-.stock .hd,.stock .it{display:grid;grid-template-columns:1fr 60px 56px 76px;gap:8px;align-items:center;padding:12px 16px}
+.stock .hd,.stock .it{display:grid;grid-template-columns:1fr 52px 44px 64px;gap:6px;align-items:center;padding:12px 14px}
 .stock .hd{font-size:12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line);position:sticky;top:calc(env(safe-area-inset-top,0px) + 60px);background:var(--card);z-index:1;box-shadow:0 1px 0 var(--line)}
 @media (min-width:760px){.stock .hd{top:calc(env(safe-area-inset-top,0px) + 60px + 46px)}}
 .stock .it{border-bottom:1px solid var(--line)}
 .stock .it:last-child{border-bottom:0}
-.stock .it .n{font-weight:500;overflow-wrap:anywhere}
+.stock .it .n{font-weight:500;overflow-wrap:anywhere;font-size:15px}
 .stock .it .n small{display:block;color:var(--muted);font-size:12px;font-weight:400}
 .stock .r{text-align:right}
-.stock .avail{font-weight:700;font-size:19px;font-family:var(--latin)}
+.stock .avail{font-weight:700;font-size:17px}
 .stock .avail.low{color:var(--warn)}
 .stock .avail.zero{color:var(--accent)}
 .stock .grp{padding:14px 16px 6px;font-size:12px;color:var(--muted);font-weight:700;background:var(--card);border-bottom:1px solid var(--line)}
 .summary{display:flex;gap:18px;flex-wrap:wrap;padding:4px 2px 0}
 .summary div{display:flex;flex-direction:column}
-.summary b{font-size:24px;font-weight:700;line-height:1.1;font-family:var(--latin)}
+.summary b{font-size:22px;font-weight:700;line-height:1.1}
 .summary b.alert{color:var(--accent)}
 .summary span{font-size:12px;color:var(--muted)}
 
@@ -144,15 +143,18 @@ input[type=number].qty,.qty{width:76px;flex:0 0 76px;min-width:0}
 
 /* confirm lines */
 .lines{display:flex;flex-direction:column}
-.line{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
+.line{display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
 .line:last-child{border-bottom:0}
 .line.unmatched{background:var(--warn-soft)}
 .line.ignored{opacity:.5}
-.line .raw{font-size:12px;color:var(--muted);grid-column:1 / -1;overflow-wrap:anywhere}
-.line .ctl{display:flex;gap:8px;align-items:center;grid-column:1 / -1;min-width:0}
+.line .raw{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.line .ctl{display:flex;gap:8px;align-items:center;min-width:0}
+.line .ctl select{width:100%;flex:1 1 100%}
+.line .qrow{display:flex;gap:10px;align-items:center}
+.line .qrow .conv{flex:1 1 auto;text-align:left;font-size:13px}
 .line .ctl .grow{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
 .line .ctl select{flex:1 1 auto;min-width:0}
-.line .conv{font-size:12px;color:var(--muted);white-space:nowrap;font-family:var(--latin)}
+.line .conv{font-size:13px;color:var(--muted);white-space:nowrap}
 .line .x{border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px}
 
 /* list rows */
@@ -716,8 +718,9 @@ function buildConfirm(source, rows, date){
       el("button",{class:"btn",onclick:()=>{ lines.push({id:uid(),raw:"",qty:1,unit:"",itemId:"",conf:null,remember:false}); draw(); }},"행 추가"),
       el("span",{class:"grow"}),
       el("button",{class:"btn",onclick:()=>host.replaceChildren()},"취소"),
-      el("button",{class:"btn primary",onclick:commit}, isIn?"입고 확정":"판매 확정")));
+      el("button",{class:"btn primary",id:"cf-commit-"+source,onclick:commit}, isIn?"입고 확정":"판매 확정")));
   host.append(card);
+  let committing = false; const batchId = uid();
 
   function draw(){
     listBox.replaceChildren();
@@ -738,7 +741,8 @@ function buildConfirm(source, rows, date){
       const rem = (L.raw && L.itemId && L.itemId!=="__ignore" && L.conf!=="exact") ? el("label",{class:"sub row",style:"gap:4px"}, el("input",{type:"checkbox",checked:L.remember,onchange:e=>L.remember=e.target.checked}),"표기 기억") : null;
       listBox.append(el("div",{class:"line"+(isUn?" unmatched":"")+(L.itemId==="__ignore"?" ignored":"")},
         el("div",{class:"raw"}, L.raw ? `인식: ${L.raw}` : "수기 입력", badge ? " " : "", badge),
-        el("div",{class:"ctl"}, sel, qty, el("span",{class:"conv"},conv), el("button",{class:"x","aria-label":"행 삭제",onclick:()=>{ lines.splice(lines.indexOf(L),1); draw(); }},"×")),
+        el("div",{class:"ctl"}, sel),
+        el("div",{class:"qrow"}, el("span",{class:"sub"},"수량"), qty, el("span",{class:"conv"},conv), el("button",{class:"x","aria-label":"행 삭제",onclick:()=>{ lines.splice(lines.indexOf(L),1); draw(); }},"×")),
         rem ? el("div",{class:"row"}, rem) : null));
     }
     if (!lines.length) listBox.append(el("div",{class:"empty"},"행이 없습니다. ‘행 추가’로 직접 입력하세요."));
@@ -747,6 +751,7 @@ function buildConfirm(source, rows, date){
   draw();
 
   async function commit(){
+    if (committing) return;
     const d = dateInput.value; if (!d) return toast("날짜를 입력하세요");
     if (lines.some(l => !l.itemId)) return toast("품목이 정해지지 않은 행이 있습니다");
     const agg = {}; const rawLines = [];
@@ -767,8 +772,9 @@ function buildConfirm(source, rows, date){
     const { stock } = computeStock();
     const neg = outLines.filter(l => (stock[l.itemId]||0)+l.qty < 0).map(l=>itemById(l.itemId).name);
     if (neg.length && !(await confirmBox("재고가 음수가 됩니다", `${neg.join(", ")} 의 재고가 0 아래로 내려갑니다. 입고 누락이나 기초재고 미입력일 수 있습니다. 계속할까요?`, "계속", true))) return;
+    const cbtn = $("#cf-commit-"+source); committing = true; cbtn.disabled = true; cbtn.replaceChildren(el("span",{class:"spin"}), " 저장 중…");
     try {
-      await db.collection("batches").add({ type:isIn?"in":"out", date:d, lines:outLines, detail:rawLines, createdAt:new Date().toISOString(), by:S.me, voided:false, memo: isIn?"납품출고서":"POS 매출현황" });
+      await db.collection("batches").add({ id:batchId, type:isIn?"in":"out", date:d, lines:outLines, detail:rawLines, createdAt:new Date().toISOString(), by:S.me, voided:false, memo: isIn?"납품출고서":"POS 매출현황" });
       // remember aliases
       const field = isIn ? "orderAliases" : "posAliases";
       const upd = {};
@@ -780,7 +786,7 @@ function buildConfirm(source, rows, date){
       host.replaceChildren(); (isIn?dropIn:dropOut).clear();
       toast(isIn ? `입고 ${outLines.length}개 품목 반영됨` : `${fmtDate(d)} 판매 ${outLines.length}개 품목 반영됨`);
       showView("stock");
-    } catch (e) { console.warn(e); toast(e?.code==="invalid_argument" ? "저장 권한이 없습니다 (편집 권한 필요)" : "저장에 실패했습니다. 다시 시도해 주세요."); }
+    } catch (e) { console.warn(e); toast("저장에 실패했습니다. 다시 시도해 주세요."); committing = false; cbtn.disabled = false; cbtn.textContent = isIn?"입고 확정":"판매 확정"; }
   }
 }
 
@@ -800,12 +806,14 @@ $("#btn-resv-new").addEventListener("click", () => { const f = $("#resv-form"); 
 $("#btn-resv-add").addEventListener("click", async () => {
   const itemId = $("#r-item").value, date = $("#r-date").value, qty = Math.max(1,Math.round(+$("#r-qty").value||1));
   if (!itemId || !date) return toast("날짜와 케이크를 선택하세요");
+  const btn = $("#btn-resv-add"); if (btn.disabled) return; btn.disabled = true; const label = btn.textContent; btn.textContent = "저장 중…";
   try {
     await db.collection("reservations").add({ itemId, date, time:$("#r-time").value||"", qty, customer:$("#r-name").value.trim(), phone:$("#r-phone").value.trim(), candles:$("#r-candles").value.trim(), staff:$("#r-staff").value.trim(), memo:$("#r-memo").value.trim(), status:"active", createdAt:new Date().toISOString(), by:S.me });
     $("#r-name").value = $("#r-phone").value = $("#r-memo").value = $("#r-candles").value = ""; $("#r-qty").value = 1;
     S.selDate = date; S.calMonth = date.slice(0,7); $("#resv-form").open = false;
     toast("예약이 추가되었습니다. 해당 수량은 판매가능에서 제외됩니다.");
-  } catch (e) { toast("저장 권한이 없거나 실패했습니다"); }
+  } catch (e) { toast("저장에 실패했습니다"); }
+  finally { btn.disabled = false; btn.textContent = label; }
 });
 async function setResv(r, status){
   const label = status==="cancelled" ? "예약 취소" : "픽업 완료";
@@ -970,12 +978,14 @@ async function api(action, payload={}){
   if (!j.ok) { if (j.error === "bad_pin") { store.set("cs.pin",""); PIN=""; askSetup("PIN이 맞지 않습니다."); } throw { code: j.error || "api_error", message: j.error }; }
   return j.data;
 }
+function applyAll(d){ S.items = d.items||[]; S.batches = d.batches||[]; S.resvs = d.reservations||[]; S.settings = { ignoreWords:["마카롱"], ...(d.settings||{}) }; }
+async function write(action, payload){ const r = await api(action, payload); if (r && r.all) { applyAll(r.all); render(); } else await refresh(); return r; }
 let refreshing = false, refreshTimer = null;
 async function refresh(){
   if (refreshing) return; refreshing = true;
   try {
     const d = await api("getAll");
-    S.items = d.items||[]; S.batches = d.batches||[]; S.resvs = d.reservations||[]; S.settings = { ignoreWords:["마카롱"], ...(d.settings||{}) };
+    applyAll(d);
     const boot = $("#boot"); if (!boot.hidden) { boot.hidden = true; try { showView(store.get("cs.view") || "stock"); } catch { showView("stock"); } }
     render();
   } catch (e) {
@@ -990,10 +1000,10 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 
 // 기존 화면 코드가 쓰는 인터페이스를 그대로 제공 (db / sample / downloads)
 const db = {
-  collection(name){ return { add: async data => { if (name==="batches") await api("addBatch",{ data:{ ...data, by:staffName } }); else if (name==="reservations") await api("addReservation",{ data:{ ...data, by:staffName } }); await refresh(); } }; },
+  collection(name){ return { add: async data => { if (name==="batches") await write("addBatch",{ data:{ ...data, by:staffName } }); else if (name==="reservations") await write("addReservation",{ data:{ ...data, by:staffName } }); } }; },
   doc(path){ const [t,id] = path.split("/"); return {
-    update: async d => { if (t==="batches" && d.voided) await api("voidBatch",{ id, by:staffName }); else if (t==="reservations") await api("updateReservation",{ id, data:d }); else if (t==="items") await api("setItem",{ id, data:d }); await refresh(); },
-    set: async d => { if (t==="items") await api("setItem",{ id, data:d }); else if (t==="settings") await api("saveSettings",{ data:d }); await refresh(); },
+    update: async d => { if (t==="batches" && d.voided) await write("voidBatch",{ id, by:staffName }); else if (t==="reservations") await write("updateReservation",{ id, data:d }); else if (t==="items") await write("setItem",{ id, data:d }); },
+    set: async d => { if (t==="items") await write("setItem",{ id, data:d }); else if (t==="settings") await write("saveSettings",{ data:d }); },
   }; },
 };
 const blobToB64 = blob => new Promise((res,rej)=>{ const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(blob); });
