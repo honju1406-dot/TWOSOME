@@ -111,6 +111,11 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 input[type=number]{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--latin)}
 input[type=number].qty,.qty{width:76px;flex:0 0 76px;min-width:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g2-qty{grid-template-columns:1fr 84px}
+.g2 input,.g2 select{min-width:0;width:100%}
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;text-align:left}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left}
 
 /* chips */
 .chips{display:flex;gap:0;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
@@ -185,6 +190,7 @@ details.card>summary{padding:14px 16px;cursor:pointer;font-weight:700;font-size:
 details.card>summary::after{content:"+";margin-left:auto;color:var(--muted);font-size:18px;font-family:var(--latin)}
 details.card[open]>summary::after{content:"–"}
 details.card .body{padding:0 16px 8px;display:flex;flex-direction:column;gap:0}
+#resv-form .body{gap:12px;padding-bottom:16px}
 .item-edit{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .item-block{padding:16px 0 18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
 .item-block:first-child{border-top:0}
@@ -342,19 +348,21 @@ details.card .body{padding:0 16px 8px;display:flex;flex-direction:column;gap:0}
   <details class="card" id="resv-form">
     <summary>예약 등록</summary>
     <div class="body">
-      <div class="row">
-        <label class="f grow">픽업 날짜<input type="date" id="r-date"></label>
-        <label class="f" style="width:110px">픽업 시간<input type="time" id="r-time" value="12:00" step="600"></label>
-        <label class="f" style="width:80px">수량<input type="number" id="r-qty" value="1" min="1"></label>
+      <div class="g2">
+        <label class="f">픽업 날짜<input type="date" id="r-date"></label>
+        <label class="f">픽업 시간<input type="time" id="r-time" value="12:00" step="600"></label>
       </div>
-      <label class="f">케이크<select id="r-item"></select></label>
-      <div class="row">
-        <label class="f grow">예약자명<input type="text" id="r-name" placeholder="홍길동"></label>
-        <label class="f grow">연락처<input type="tel" id="r-phone" placeholder="010-"></label>
+      <div class="g2 g2-qty">
+        <label class="f">케이크<select id="r-item"></select></label>
+        <label class="f">수량<input type="number" id="r-qty" value="1" min="1"></label>
       </div>
-      <div class="row">
-        <label class="f grow">초<input type="text" id="r-candles" placeholder="예: 숫자초 3, 일반초 5 / 없음"></label>
-        <label class="f grow">예약 담당자<input type="text" id="r-staff" placeholder="받은 직원 이름"></label>
+      <div class="g2">
+        <label class="f">예약자명<input type="text" id="r-name" placeholder="홍길동"></label>
+        <label class="f">연락처<input type="tel" id="r-phone" placeholder="010-"></label>
+      </div>
+      <div class="g2">
+        <label class="f">초<input type="text" id="r-candles" placeholder="숫자초 3, 일반초 5"></label>
+        <label class="f">예약 담당자<input type="text" id="r-staff" placeholder="받은 직원"></label>
       </div>
       <label class="f">메모<input type="text" id="r-memo" placeholder="문구, 포장, 결제 여부 등"></label>
       <div id="r-avail" class="sub"></div>
@@ -385,12 +393,11 @@ details.card .body{padding:0 16px 8px;display:flex;flex-direction:column;gap:0}
 <section class="view" id="v-items" hidden>
   <div class="card pad stack">
     <h2>품목 · 표기 매핑</h2>
-    <p class="sub">발주서 표기와 POS 표기를 각 품목에 연결합니다. 인식 확정 화면에서 “표기 기억”을 켜두면 여기에 자동으로 추가됩니다. 조각 품목의 <b>PAC당 수량</b>은 발주 1 PAC이 몇 조각인지입니다.</p>
-    <div class="row">
-      <button class="btn" id="btn-item-add">품목 추가</button>
-      <label class="f grow">무시할 단어 (쉼표 구분)<input type="text" id="ignore-words" placeholder="마카롱"></label>
-      <button class="btn sm" id="btn-ignore-save">저장</button>
-    </div>
+    <p class="sub" style="margin:0">명세서·POS에 적힌 이름을 각 품목에 연결합니다. 인식 확정 화면에서 “표기 기억”을 켜두면 자동으로 추가됩니다.</p>
+    <label class="f">무시할 단어 (쉼표로 구분 · 케이크가 아닌 품목)
+      <div class="row" style="flex-wrap:nowrap"><input type="text" id="ignore-words" placeholder="마카롱, 아이스크림" style="flex:1 1 auto;min-width:0"><button class="btn" id="btn-ignore-save" style="flex:none">저장</button></div>
+    </label>
+    <button class="btn block" id="btn-item-add">+ 품목 추가</button>
   </div>
   <div id="items-list" class="stack"></div>
 </section>
@@ -824,7 +831,7 @@ function updateResvAvail(){
   const { stock, reserved } = computeStock(); const it = itemById(id); const k = stockKey(id);
   const a = (stock[k]||0)-(reserved[k]||0);
   const sheet = k !== id ? itemById(k) : null;
-  box.replaceChildren(`${it?.name||""} 현재 판매가능 `, el("b",{class:"num"},a), ` ${UNIT[it?.kind]||""}`, sheet ? el("span",{class:"sub"},` (${sheet.name} 기준)`) : null, a<=0 ? el("span",{class:"pill bad",style:"margin-left:8px"},"재고 없음 — 입고 후 픽업") : null);
+  box.replaceChildren(...[`${it?.name||""} 현재 판매가능 `, el("b",{class:"num"},a), ` ${UNIT[it?.kind]||""}`, sheet ? el("span",{class:"sub"},` (${sheet.name} 기준)`) : null, a<=0 ? el("span",{class:"pill bad",style:"margin-left:8px"},"재고 없음 — 입고 후 픽업") : null].filter(Boolean));
 }
 ["r-item","r-date"].forEach(id => $("#"+id).addEventListener("change", updateResvAvail));
 $("#btn-resv-new").addEventListener("click", () => { const f = $("#resv-form"); f.open = true; $("#r-date").value = S.selDate; if (!$("#r-staff").value) $("#r-staff").value = S.meName||""; updateResvAvail(); f.scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("#r-name").focus(),300); });
@@ -995,6 +1002,7 @@ $("#btn-ignore-save").addEventListener("click", async () => {
 });
 
 // ---------- 데이터 계층 (Apps Script API) ----------
+const APP_VERSION = "1.6";
 const CFG = window.APP_CONFIG || {};
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
 let API_URL = CFG.GAS_WEB_APP_URL || store.get("cs.api") || "";
@@ -1074,7 +1082,7 @@ function askSetup(msg){
   const pinIn = el("input",{type:"tel",value:PIN,placeholder:"매장 PIN"});
   const nameIn = el("input",{type:"text",value:staffName,placeholder:"예: 김민지"});
   m.append(el("div",{class:"card stack"},
-    el("h2",{},"처음 설정"), msg ? el("div",{class:"status err"},msg) : null,
+    el("h2",{},"설정 ", el("span",{class:"sub",style:"font-weight:400"},"앱 버전 "+APP_VERSION)), msg ? el("div",{class:"status err"},msg) : null,
     CFG.GAS_WEB_APP_URL ? null : el("label",{class:"f"},"서버 주소 (앱스 스크립트 웹 앱 URL)",urlIn),
     el("label",{class:"f"},"매장 PIN",pinIn),
     el("label",{class:"f"},"내 이름 (기록·예약 담당자에 표시)",nameIn),
