@@ -202,6 +202,23 @@ details.card .body{padding:0 16px 8px;display:flex;flex-direction:column;gap:0}
 .modal .card{width:100%;max-width:520px;padding:18px}
 @media (min-width:600px){.modal{align-items:center}}
 
+/* reorder & ranking */
+.ro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:10px 16px;border-bottom:1px solid var(--line);align-items:center}
+.ro:last-child{border-bottom:0}
+.ro .n{font-weight:600;grid-column:1;grid-row:1}
+.ro .why{font-size:11.5px;color:var(--muted);grid-column:1;grid-row:2}
+.ro .q{grid-column:2;grid-row:1 / 3;text-align:right}
+.ro .q b{display:block;font-size:16px;font-weight:700;color:var(--accent)}
+.ro .q span{font-size:11px;color:var(--muted)}
+.rk{display:flex;gap:10px;align-items:center;padding:7px 16px}
+.rk>div:nth-child(2){flex:1 1 auto;min-width:0}
+.rk .i{flex:0 0 22px;font-size:12px;color:var(--muted);font-weight:600;text-align:center}
+.rk .i.lead{color:var(--accent)}
+.rk .bar{height:6px;background:var(--stone-2);border-radius:3px;overflow:hidden;margin-top:4px}
+.rk .bar i{display:block;height:100%;background:var(--ink);border-radius:3px}
+.rk .n{font-size:13.5px;font-weight:500}
+.rk .v{flex:0 0 44px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.pill.accent{background:var(--accent);color:#fff}
 /* today's reservation production */
 .prod{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);box-shadow:var(--shadow);padding:13px 15px;display:flex;flex-direction:column;gap:7px}
 .prod-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -277,6 +294,8 @@ details.card .body{padding:0 16px 8px;display:flex;flex-direction:column;gap:0}
     <div><b class="num alert" id="k-low">–</b><span>부족·품절</span></div>
   </div>
   <div id="today-resv"></div>
+  <div id="reorder"></div>
+  <div id="ranking"></div>
   <div class="row">
     <div class="chips" id="kind-chips">
       <button class="chip" data-k="all" aria-pressed="true">전체</button>
@@ -331,6 +350,18 @@ details.card .body{padding:0 16px 8px;display:flex;flex-direction:column;gap:0}
 <!-- 예약 -->
 <section class="view" id="v-resv" hidden>
   <div id="resv-prod"></div>
+  <div class="card pad stack" id="order-slip">
+    <h2>투썸오더 주문서로 예약 등록 <span class="sub">사진 인식</span></h2>
+    <label class="drop" id="drop-order">
+      <input type="file" id="file-order" accept="image/*,.heic,.heif" multiple>
+      <div class="big">주문서(빌지) 촬영</div>
+      <div class="sub">예약시간·메뉴·초·주문자명을 읽어 예약으로 넣습니다. 여러 장도 됩니다.</div>
+    </label>
+    <div class="thumbs" id="thumbs-order"></div>
+    <button class="btn primary block" id="btn-recog-order" disabled>주문서 인식</button>
+    <div id="status-order"></div>
+    <div id="confirm-order"></div>
+  </div>
   <div class="card">
     <div class="cal-head">
       <button class="btn sm" id="cal-prev" aria-label="이전 달">‹</button>
@@ -398,6 +429,14 @@ details.card .body{padding:0 16px 8px;display:flex;flex-direction:column;gap:0}
       <div class="row" style="flex-wrap:nowrap"><input type="text" id="ignore-words" placeholder="마카롱, 아이스크림" style="flex:1 1 auto;min-width:0"><button class="btn" id="btn-ignore-save" style="flex:none">저장</button></div>
     </label>
     <button class="btn block" id="btn-item-add">+ 품목 추가</button>
+  </div>
+  <div class="card pad stack">
+    <h2>발주 기준</h2>
+    <p class="sub" style="margin:0">최근 14일 판매 속도로 계산합니다. 입고일은 배송 규칙(주문 다음 날부터 일요일 제외 2일: 월→수, 목→토, 금→월, 토·일→화)으로 자동 계산되고, 판매가능 수량이 "입고까지 + 확보 일수" 동안 팔릴 양보다 적으면 발주 필요로 표시됩니다.</p>
+    <div class="g2">
+      <label class="f">확보 일수 (입고 후 며칠분)<input type="number" id="set-cover" min="1" value="7"></label>
+    </div>
+    <button class="btn" id="btn-reorder-save">저장</button>
   </div>
   <div id="items-list" class="stack"></div>
 </section>
@@ -513,6 +552,82 @@ function productionBanner(){
   return box;
 }
 
+// ---------- 판매 통계 · 발주 제안 ----------
+function salesByItem(fromDate, toDate){
+  const by = {};
+  for (const b of S.batches) {
+    if (b.voided || b.type !== "out") continue;
+    if (fromDate && b.date < fromDate) continue; if (toDate && b.date > toDate) continue;
+    for (const l of (b.lines||[])) { const q = -(+l.qty||0); if (q > 0) by[l.itemId] = (by[l.itemId]||0) + q; }
+  }
+  return by;
+}
+const dateShift = (d, n) => { const x = new Date(d+"T00:00:00"); x.setDate(x.getDate()+n); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; };
+// 배송 규칙: 주문 다음 날부터 일요일을 제외하고 2일째 되는 날 입고 (월→수, 목→토, 금→월, 토→화, 일→화)
+function arrivalDate(orderDate){
+  let d = orderDate, n = 0;
+  while (n < 2) { d = dateShift(d, 1); if (new Date(d+"T00:00:00").getDay() !== 0) n++; }
+  return d;
+}
+const daysBetween = (a, b) => Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00")) / 86400000);
+function reorderPlan(){
+  const t = todayStr(); const cover = +S.settings.coverDays || 7;
+  const arrive = arrivalDate(t); const lead = daysBetween(t, arrive);
+  const from = dateShift(t, -13);
+  const raw = salesByItem(from, t);
+  // 판매는 케이크 단위로 기록되므로 공용 시트 품목으로 합산
+  const s14 = {}; for (const [id,q] of Object.entries(raw)) { const k = stockKey(id); s14[k] = (s14[k]||0) + q; }
+  const days = Math.max(1, Math.min(14, S.batches.filter(b=>b.type==="out"&&!b.voided).map(b=>b.date).filter(d=>d>=from).filter((d,i,a)=>a.indexOf(d)===i).length || 1));
+  const { stock, reserved } = computeStock();
+  const raw30 = salesByItem(dateShift(t,-29), t); const s30 = {}; for (const [id,q] of Object.entries(raw30)) { const k = stockKey(id); s30[k] = (s30[k]||0) + q; }
+  const out = [];
+  for (const it of S.items) {
+    if (it.active === false || (it.sheetOf && itemById(it.sheetOf))) continue;
+    const avail = (stock[it.id]||0) - (reserved[it.id]||0);
+    const daily = (s14[it.id]||0) / days;
+    // 최근 30일 판매도 없고 재고도 없는 품목(취급 안 함)은 제외
+    if (!(s30[it.id]>0) && avail <= 0 && !(stock[it.id]>0)) continue;
+    const need = Math.ceil(daily * (cover + lead));
+    const minStock = it.low ?? (it.kind === "whole" ? 1 : 0);
+    if (avail < need || avail <= minStock) {
+      const target = Math.max(need, minStock + 1);
+      let qty = Math.max(1, target - avail); let unit = UNIT[it.kind]; let packs = null;
+      if (it.kind === "piece" && (it.packQty||1) > 1) { packs = Math.ceil(qty / it.packQty); qty = packs * it.packQty; }
+      out.push({ item: it, avail, daily, need, qty, packs, unit, hot: daily >= 1 });
+    }
+  }
+  out.sort((a,b) => (b.hot - a.hot) || (a.avail - b.avail));
+  return { rows: out, days, cover, lead, arrive };
+}
+function renderReorder(){
+  const host = $("#reorder"); if (!host) return; host.replaceChildren();
+  const plan = reorderPlan(); if (!plan.rows.length) return;
+  const text = () => plan.rows.map(r => `${r.item.name} ${r.packs ? r.packs+"PAC("+r.qty+"조각)" : r.qty+r.unit}`).join("\n");
+  const copyBtn = el("button",{class:"btn sm",onclick:async()=>{ try { await navigator.clipboard.writeText("[발주 목록 "+fmtDate(todayStr())+"]\n"+text()); toast("발주 목록을 복사했습니다"); } catch { toast("복사할 수 없는 환경입니다"); } }},"목록 복사");
+  const d = el("details",{class:"card",open:true},
+    el("summary",{style:"padding:12px 16px 10px;list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer"}, el("span",{class:"pill accent"},"발주 필요"), el("b",{}, `${plan.rows.length}개 품목`), el("span",{class:"grow"}), copyBtn),
+    el("div",{class:"sub",style:"padding:0 16px 10px"}, `오늘 발주하면 ${fmtDate(plan.arrive)} (${dow(plan.arrive)}) 입고 · 최근 ${plan.days}일 판매 속도 기준`));
+  const list = el("div",{});
+  for (const r of plan.rows) {
+    const why = r.hot ? `하루 ${r.daily.toFixed(1)}개 판매 · 입고까지 ${plan.lead}일 + ${plan.cover}일분 = ${r.need}개 필요, 판매가능 ${r.avail}` : (r.avail <= 0 ? `품절 (판매가능 ${r.avail})` : `판매가능 ${r.avail} · 최소 재고 미만`);
+    list.append(el("div",{class:"ro"}, el("div",{class:"n"}, r.item.name, r.hot ? el("span",{class:"pill warn",style:"margin-left:6px"},"잘 나감") : null), el("div",{class:"why"}, why),
+      el("div",{class:"q"}, el("b",{}, r.packs ? `${r.packs} PAC` : `${r.qty} ${r.unit}`), r.packs ? el("span",{}, `${r.qty}조각`) : null)));
+  }
+  d.append(list); host.append(d);
+}
+function renderRanking(){
+  const host = $("#ranking"); if (!host) return; host.replaceChildren();
+  const t = todayStr(); const ym = t.slice(0,7);
+  const by = salesByItem(ym+"-01", t);
+  const rows = Object.entries(by).map(([id,q])=>({ item:itemById(id), q })).filter(x=>x.item && x.item.kind !== "piece" && x.item.kind !== "cup").sort((a,b)=>b.q-a.q).slice(0,10);
+  const all = Object.entries(by).map(([id,q])=>({ item:itemById(id), q })).filter(x=>x.item).sort((a,b)=>b.q-a.q).slice(0,10);
+  if (!all.length) return;
+  const d = el("details",{class:"card"}, el("summary",{style:"padding:12px 16px 10px;list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer"}, el("b",{}, `${+ym.slice(5)}월 판매 순위`), el("span",{class:"sub"}, rows.length ? `1위 ${rows[0].item.name} ${rows[0].q}개` : ""), el("span",{class:"grow"}), el("span",{class:"sub"},"펼치기")));
+  const mk = (title, arr) => { const box = el("div",{}); if (!arr.length) return box; box.append(el("div",{class:"grp-inline"},title)); const max = arr[0].q; arr.forEach((x,i)=>box.append(el("div",{class:"rk"}, el("div",{class:"i"+(i<3?" lead":"")}, i+1), el("div",{}, el("div",{class:"n"},x.item.name), el("div",{class:"bar"}, el("i",{style:`width:${Math.round(x.q/max*100)}%`}))), el("div",{class:"v"}, x.q)))); return box; };
+  d.append(mk("홀케이크", rows), mk("전체 (조각·컵 포함)", all), el("div",{style:"height:8px"}));
+  host.append(d);
+}
+
 // ---------- views ----------
 let currentView = "stock";
 function showView(v){
@@ -547,6 +662,7 @@ function renderStock(){
   $("#k-whole").textContent = whole; $("#k-resv").textContent = resvSum; $("#k-low").textContent = low;
 
   const tr = $("#today-resv"); tr.replaceChildren(productionBanner());
+  renderReorder(); renderRanking();
 
   const box = $("#stock-table"); box.replaceChildren();
   box.append(el("div",{class:"hd"}, el("span",{},"품목"), el("span",{class:"r"},"실재고"), el("span",{class:"r"},"예약"), el("span",{class:"r"},"판매가능")));
@@ -822,6 +938,68 @@ function buildConfirm(source, rows, date){
   }
 }
 
+// ---------- 투썸오더 주문서 → 예약 ----------
+const dropOrder = setupDrop("order");
+$("#btn-recog-order").addEventListener("click", async () => {
+  const files = dropOrder.files; if (!files.length) return;
+  const btn = $("#btn-recog-order"); btn.disabled = true; setStatus("order","주문서를 읽는 중…");
+  const prompt = `이 사진들은 카페 영수증 프린터로 출력된 '[모바일앱 주문서]'(케이크 예약 주문서)입니다. 사진 한 장이 주문 하나입니다. 각 주문서에서:
+- 주문번호, 주문시간
+- '예약시간' 줄의 날짜(YYYY-MM-DD)와 시작 시각(HH:MM). 예: "2026-09-27 11:00 ~ 12:00" → date "2026-09-27", time "11:00"
+- 메뉴 표에서 '[T]'로 시작하는 줄은 케이크(품목명, 수량). 그 아래 '▶'로 시작하는 줄은 그 케이크의 옵션(초 종류와 수량: 숫자초6 1, 큰초 6, 작은초 6, 하트초 레드 1 등)
+- '[주문자명]' 값 (예: 심*철), '[결제]' 값, '[일회용품]' 아래 줄(포크, 케이크칼 등)이 있으면 memo에
+아래 품목 목록에서 케이크에 가장 잘 맞는 id를 고르세요. 없으면 null.
+
+품목 목록 (id | 이름 | POS 표기):
+${itemCatalog("out")}
+
+JSON 배열로만 답하세요. 형식: [{"orderNo":"901","date":"2026-09-27","time":"11:00","customer":"심*철","paid":"Y","memo":"포크, 케이크칼(성냥포함)","cakes":[{"raw":"망고생","qty":1,"itemId":"mango_h","candles":"숫자초6 1, 큰초 6"}]}]`;
+  try {
+    const results = await recognize(files, prompt);
+    const orders = results.flat().filter(o => o && Array.isArray(o.cakes));
+    if (!orders.length) { setStatus("order","주문서를 읽지 못했습니다. 글자가 잘 보이게 다시 찍어 주세요.","err"); return; }
+    setStatus("order","");
+    buildOrderConfirm(orders);
+  } catch (e) { console.warn(e); setStatus("order", errCopy(e), "err"); }
+  finally { btn.disabled = false; }
+});
+function buildOrderConfirm(orders){
+  const host = $("#confirm-order"); host.replaceChildren();
+  const rows = [];
+  for (const o of orders) for (const c of o.cakes) {
+    const m = matchItem(c.raw||"", "out"); const itemId = m?.item.id || (c.itemId && itemById(c.itemId) ? c.itemId : "");
+    rows.push({ id:uid(), date: /^\d{4}-\d{2}-\d{2}$/.test(o.date||"") ? o.date : todayStr(), time: /^\d{1,2}:\d{2}$/.test(o.time||"") ? o.time.padStart(5,"0") : "", itemId, raw:c.raw||"", qty:Math.max(1,Math.round(+c.qty||1)), customer:o.customer||"", candles:c.candles||"", memo:[o.orderNo?"주문번호 "+o.orderNo:"", o.paid?"결제 "+o.paid:"", o.memo||""].filter(Boolean).join(" · ") });
+  }
+  const list = el("div",{class:"lines"});
+  const draw = () => {
+    list.replaceChildren();
+    for (const r of rows) {
+      const sel = el("select",{onchange:e=>{ r.itemId=e.target.value; draw(); }}); fillItemSelect(sel,{placeholder:"— 케이크 선택 —"}); sel.value = r.itemId;
+      const past = r.date < todayStr();
+      list.append(el("div",{class:"line"+(r.itemId?"":" unmatched")},
+        el("div",{class:"raw"}, `인식: ${r.raw}`, r.itemId ? null : el("span",{class:"pill warn",style:"margin-left:6px"},"품목 확인 필요"), past ? el("span",{class:"pill mute",style:"margin-left:6px"},"지난 날짜") : null),
+        el("div",{class:"g2"}, el("label",{class:"f"},"픽업 날짜", el("input",{type:"date",value:r.date,onchange:e=>r.date=e.target.value})), el("label",{class:"f"},"시간", el("input",{type:"time",value:r.time,onchange:e=>r.time=e.target.value}))),
+        el("div",{class:"g2 g2-qty"}, el("label",{class:"f"},"케이크", sel), el("label",{class:"f"},"수량", el("input",{type:"number",min:"1",value:r.qty,onchange:e=>r.qty=Math.max(1,Math.round(+e.target.value||1))}))),
+        el("div",{class:"g2"}, el("label",{class:"f"},"예약자", el("input",{type:"text",value:r.customer,onchange:e=>r.customer=e.target.value})), el("label",{class:"f"},"초", el("input",{type:"text",value:r.candles,onchange:e=>r.candles=e.target.value}))),
+        el("label",{class:"f"},"메모", el("input",{type:"text",value:r.memo,onchange:e=>r.memo=e.target.value})),
+        el("div",{class:"row"}, el("span",{class:"grow"}), el("button",{class:"btn sm danger",onclick:()=>{ rows.splice(rows.indexOf(r),1); draw(); }},"이 건 제외"))));
+    }
+    if (!rows.length) list.append(el("div",{class:"empty"},"등록할 예약이 없습니다."));
+  };
+  draw();
+  let busy = false;
+  const btn = el("button",{class:"btn primary",onclick:async()=>{
+    if (busy) return; if (rows.some(r=>!r.itemId)) return toast("케이크가 정해지지 않은 건이 있습니다");
+    busy = true; btn.disabled = true; btn.textContent = "등록 중…";
+    try {
+      for (const r of rows) await api("addReservation",{ data:{ itemId:r.itemId, date:r.date, time:r.time, qty:r.qty, customer:r.customer, phone:"", candles:r.candles, staff:staffName, memo:r.memo, by:staffName } });
+      await refresh(); host.replaceChildren(); dropOrder.clear(); toast(`예약 ${rows.length}건 등록됨`);
+      if (rows[0]) { S.selDate = rows[0].date; S.calMonth = rows[0].date.slice(0,7); renderResv(); }
+    } catch (e) { toast("등록에 실패했습니다"); busy = false; btn.disabled = false; btn.textContent = "예약 등록"; }
+  }},"예약 등록");
+  host.append(el("div",{class:"card"}, el("div",{class:"pad"}, el("h2",{},"주문서 확인", el("span",{class:"sub"},`${rows.length}건`))), list, el("div",{class:"pad row"}, el("button",{class:"btn",onclick:()=>host.replaceChildren()},"취소"), el("span",{class:"grow"}), btn)));
+}
+
 // ---------- reservations ----------
 $("#r-date").value = todayStr();
 S.selDate = todayStr(); S.calMonth = todayStr().slice(0,7);
@@ -960,6 +1138,7 @@ $("#btn-export").addEventListener("click", async () => {
 // ---------- items ----------
 function renderItems(){
   $("#ignore-words").value = (S.settings.ignoreWords||[]).join(", ");
+  $("#set-cover").value = S.settings.coverDays ?? 7;
   const host = $("#items-list"); host.replaceChildren();
   for (const k of ["whole","piece","cup"]) {
     const its = S.items.filter(i=>i.kind===k).sort((a,b)=>a.name.localeCompare(b.name,"ko"));
@@ -996,13 +1175,17 @@ $("#btn-item-add").addEventListener("click", async () => {
   try { await db.doc("items/"+id).set({ name:"새 품목", kind:"whole", packQty:1, orderAliases:[], posAliases:[], active:true, sort:900 }); toast("품목이 추가되었습니다. 이름을 수정하세요."); }
   catch { toast("추가 권한이 없거나 실패했습니다"); }
 });
+$("#btn-reorder-save").addEventListener("click", async () => {
+  const coverDays = Math.max(1, Math.round(+$("#set-cover").value||7));
+  try { await db.doc("settings/main").set({ coverDays }); toast("저장됨"); } catch { toast("저장 실패"); }
+});
 $("#btn-ignore-save").addEventListener("click", async () => {
   const words = $("#ignore-words").value.split(",").map(s=>s.trim()).filter(Boolean);
   try { await db.doc("settings/main").set({ ignoreWords: words }); toast("저장됨"); } catch { toast("저장 실패"); }
 });
 
 // ---------- 데이터 계층 (Apps Script API) ----------
-const APP_VERSION = "1.6";
+const APP_VERSION = "1.8";
 const CFG = window.APP_CONFIG || {};
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
 let API_URL = CFG.GAS_WEB_APP_URL || store.get("cs.api") || "";
